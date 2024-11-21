@@ -16,7 +16,8 @@
     </div>
 
 <script>
- const searchInput = document.getElementById('searchInput');
+const GITHUB_TOKEN = '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';
+const searchInput = document.getElementById('searchInput');
 const autocompleteList = document.getElementById('autocompleteList');
 const repoList = document.getElementById('repoList');
 
@@ -29,10 +30,20 @@ const debounce = (func, delay) => {
 };
 
 const fetchRepositories = async (query) => {
-    if (!query) return;
+        if (!query) return;
     document.getElementById('loading').style.display = 'block';
     try {
-        const response = await fetch(`https://api.github.com/search/repositories?q=${query}&per_page=100`);
+        const response = await fetch(`https://api.github.com/search/repositories?q=${query}&per_page=100`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error fetching repositories');
+        }
         const data = await response.json();
         document.getElementById('loading').style.display = 'none';
         const filteredRepos = data.items.filter(repo => !addedRepositories.some(added => added.id === repo.id));
@@ -85,7 +96,7 @@ const removeRepository = (button) => {
 
 searchInput.addEventListener('input', () => {
     const query = searchInput.value.trim();
-    debounce(() => fetchRepositories(query), 300);
+    debounce(() => fetchRepositories(query), 500);
 });
 
 searchInput.addEventListener('focus', () => {
@@ -103,4 +114,6 @@ document.addEventListener('click', (event) => {
 
 </body>
 </html>
+
+
 
