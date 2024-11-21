@@ -1,0 +1,106 @@
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>GitHub API</title>
+</head>
+<body>
+     <div class="container">
+        <input type="text" id="searchInput" placeholder="Search">
+        <ul id="autocompleteList"></ul>
+        <ul id="repoList"></ul>
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+<script>
+ const searchInput = document.getElementById('searchInput');
+const autocompleteList = document.getElementById('autocompleteList');
+const repoList = document.getElementById('repoList');
+
+let debounceTimeout;
+let addedRepositories = [];
+
+const debounce = (func, delay) => {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(func, delay);
+};
+
+const fetchRepositories = async (query) => {
+    if (!query) return;
+    document.getElementById('loading').style.display = 'block';
+    try {
+        const response = await fetch(`https://api.github.com/search/repositories?q=${query}&per_page=100`);
+        const data = await response.json();
+        document.getElementById('loading').style.display = 'none';
+        const filteredRepos = data.items.filter(repo => !addedRepositories.some(added => added.id === repo.id));
+        displayAutocompleteList(filteredRepos.slice(0, 5));
+    } catch (error) {
+        console.error('Error fetching repositories:', error);
+        document.getElementById('loading').style.display = 'none';
+    }
+};
+
+const displayAutocompleteList = (repositories) => {
+    autocompleteList.innerHTML = '';
+    if (repositories.length > 0) {
+        repositories.forEach(repo => {
+            const li = document.createElement('li');
+            li.textContent = repo.name;
+            li.addEventListener('click', () => addRepositoryToList(repo));
+            autocompleteList.appendChild(li);
+        });
+        autocompleteList.style.display = 'block';
+    } else {
+        autocompleteList.style.display = 'none';
+    }
+};
+
+const addRepositoryToList = (repo) => {
+    addedRepositories.push(repo);
+    const li = document.createElement('li');
+     li.innerHTML = `
+        <div class="left-side">
+            <div><strong>Name:</strong> ${repo.name}</div>
+            <div><strong>Owner:</strong> ${repo.owner.login}</div>
+            <div>★ ${repo.stargazers_count}</div>
+        </div>
+        <button onclick="removeRepository(this)">⨉</button>
+    `;
+    repoList.appendChild(li);
+    searchInput.value = '';
+    autocompleteList.style.display = 'none';
+    fetchRepositories(searchInput.value);
+};
+
+const removeRepository = (button) => {
+    const repoItem = button.closest('li');
+    const repoName = repoItem.querySelector('div').textContent.replace('Name:', '').trim();
+    addedRepositories = addedRepositories.filter(repo => repo.name !== repoName);
+    repoItem.remove();
+    fetchRepositories(searchInput.value);
+};
+
+searchInput.addEventListener('input', () => {
+    const query = searchInput.value.trim();
+    debounce(() => fetchRepositories(query), 300);
+});
+
+searchInput.addEventListener('focus', () => {
+    if (searchInput.value.trim()) {
+        autocompleteList.style.display = 'block';
+    }
+});
+
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('#searchInput') && !event.target.closest('#autocompleteList')) {
+        autocompleteList.style.display = 'none';
+    } 
+});
+</script>
+
+</body>
+</html>
+
